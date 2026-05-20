@@ -1,15 +1,23 @@
 # =============================================================================
-# Target OS: RedHat Family (RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora)
+# Ansible Inventory — Amazon Linux 2023 on AWS EC2
+# =============================================================================
+# master  172.31.42.76  — Control node (runs ansible-playbook FROM here)
+# host1   172.31.38.10  — Managed target
+# host2   172.31.32.228 — Managed target
+#
+# IMPORTANT: Replace "your-key.pem" with your actual EC2 key pair filename.
+#            The .pem file must be on the master node at ~/.ssh/
+#            Permissions: chmod 400 ~/.ssh/your-key.pem
 # =============================================================================
 
-[demo_servers]
-localhost ansible_connection=local
+[master]
+master  ansible_host=172.31.42.76  ansible_connection=local  ansible_user=ec2-user
 
-# For real RedHat remote servers, comment out localhost and use:
-# rhel01 ansible_host=192.168.1.10 ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/id_rsa
-# rhel02 ansible_host=192.168.1.11 ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/id_rsa
+[managed]
+host1   ansible_host=172.31.38.10   ansible_user=ec2-user  ansible_ssh_private_key_file=~/.ssh/your-key.pem
+host2   ansible_host=172.31.32.228  ansible_user=ec2-user  ansible_ssh_private_key_file=~/.ssh/your-key.pem
 
-# Common ansible_user values per distro:
-#   RHEL / CentOS stream  → ec2-user (AWS), cloud-user (GCP/Azure)
-#   Rocky / AlmaLinux     → rocky, almalinux, or ec2-user
-#   Fedora                → fedora
+# Group that includes all 3 servers (master + host1 + host2)
+[all_servers:children]
+master
+managed

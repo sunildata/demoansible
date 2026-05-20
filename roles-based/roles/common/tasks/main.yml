@@ -1,30 +1,33 @@
 ---
 # =============================================================================
-# Role: common (RedHat Family)
-# Purpose: OS baseline — pre-flight checks, EPEL setup, dnf cache, group creation.
-#          Must run BEFORE the users and apps roles.
-# Target OS: RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
+# Role: common
+# Purpose : OS baseline — pre-flight checks, optional EPEL, dnf cache, group creation.
+#           Must run BEFORE the users and apps roles.
+# Target  : Amazon Linux 2023 (also works on RHEL / CentOS / Rocky / Fedora)
 # =============================================================================
 
-- name: "Pre-flight — Verify OS is RedHat family"
+- name: "Pre-flight — Verify OS is RedHat family (includes Amazon Linux)"
   ansible.builtin.assert:
     that:
       - ansible_os_family == 'RedHat'
     fail_msg: >
       Unsupported OS: {{ ansible_os_family }}.
-      This role targets RedHat family (RHEL, CentOS, Rocky, AlmaLinux, Fedora).
-    success_msg: "OS '{{ ansible_distribution }} {{ ansible_distribution_version }}' is supported"
+      Supported: Amazon Linux 2023, RHEL, CentOS, Rocky, AlmaLinux, Fedora.
+    success_msg: "OS '{{ ansible_distribution }} {{ ansible_distribution_version }}' — OK"
   tags: [always, common, preflight]
 
-- name: "Pre-flight — Install EPEL repository (required for htop and other packages)"
+# Amazon Linux 2023 ships all required packages (htop, nginx, git, curl, vim-enhanced)
+# in its default repos — no EPEL needed. EPEL is only installed on RHEL/CentOS/Rocky.
+- name: "Pre-flight — Install EPEL repository (RHEL/CentOS only, skip on Amazon Linux)"
   ansible.builtin.package:
     name: epel-release
     state: present
+  when: ansible_distribution != 'Amazon'
   tags: [always, common, preflight]
 
-- name: "Pre-flight — Refresh dnf/yum package cache"
+- name: "Pre-flight — Refresh dnf package cache"
   ansible.builtin.command:
-    cmd: "{{ 'dnf' if ansible_pkg_mgr == 'dnf' else 'yum' }} makecache"
+    cmd: dnf makecache
   changed_when: false
   tags: [always, common, preflight]
 

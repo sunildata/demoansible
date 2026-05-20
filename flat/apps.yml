@@ -1,16 +1,21 @@
 ---
 # =============================================================================
-# FLAT APPROACH — File 2: Application Installation (RedHat Family)
+# FLAT APPROACH — File 2: Application Installation
 # =============================================================================
-# Target OS: RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
-# Installs: nginx, git, curl, htop, vim-enhanced
-# Manages:  nginx service (start + enable at boot), firewalld HTTP rule
+# Target OS : Amazon Linux 2023 (also works on RHEL / CentOS / Rocky / Fedora)
+# Installs  : nginx, git, curl, htop, vim-enhanced
+# Manages   : nginx service (start + enable at boot)
+# Firewalld : Skipped automatically on EC2 — AWS Security Groups handle ports
+#             (open port 80/443 in your EC2 Security Group instead)
 #
-# Prerequisites:
-#   - EPEL repository is installed by this playbook automatically
+# Run against managed nodes only:
+#   ansible-playbook flat/apps.yml -i flat/inventory/hosts -l managed
 #
-# Run:     ansible-playbook flat/apps.yml -i flat/inventory/hosts
-# Dry run: ansible-playbook flat/apps.yml -i flat/inventory/hosts --check
+# Run against all servers (master + host1 + host2):
+#   ansible-playbook flat/apps.yml -i flat/inventory/hosts -l all_servers
+#
+# Dry run:
+#   ansible-playbook flat/apps.yml -i flat/inventory/hosts -l managed --check
 # =============================================================================
 
 - name: "Application Installation — Install and start 5 applications"
@@ -20,25 +25,28 @@
     - group_vars/all.yml
 
   pre_tasks:
-    - name: "Pre-flight — Verify OS is RedHat family"
+    - name: "Pre-flight — Verify OS is RedHat family (includes Amazon Linux)"
       ansible.builtin.assert:
         that:
           - ansible_os_family == 'RedHat'
         fail_msg: >
           Unsupported OS: {{ ansible_os_family }}.
-          This playbook targets RedHat family (RHEL, CentOS, Rocky, AlmaLinux, Fedora).
-        success_msg: "OS '{{ ansible_distribution }} {{ ansible_distribution_version }}' is supported"
+          Supported: Amazon Linux 2023, RHEL, CentOS, Rocky, AlmaLinux, Fedora.
+        success_msg: "OS '{{ ansible_distribution }} {{ ansible_distribution_version }}' — OK"
       tags: [always, preflight]
 
-    - name: "Pre-flight — Install EPEL repository (required for htop)"
+    # EPEL is only needed on RHEL/CentOS/Rocky — Amazon Linux 2023 ships
+    # htop, nginx, and all required packages in its default repos.
+    - name: "Pre-flight — Install EPEL repository (RHEL/CentOS only, skip on Amazon Linux)"
       ansible.builtin.package:
         name: epel-release
         state: present
+      when: ansible_distribution != 'Amazon'
       tags: [always, preflight]
 
-    - name: "Pre-flight — Refresh dnf/yum package cache"
+    - name: "Pre-flight — Refresh dnf package cache"
       ansible.builtin.command:
-        cmd: "{{ 'dnf' if ansible_pkg_mgr == 'dnf' else 'yum' }} makecache"
+        cmd: dnf makecache
       changed_when: false
       tags: [always, preflight]
 
@@ -63,7 +71,14 @@
       when: item.service is not none
       tags: [apps, services]
 
-    - name: "Firewalld — allow HTTP traffic for nginx"
+    # On EC2, AWS Security Groups control inbound traffic — firewalld is
+    # typically not running. These tasks are skipped automatically if firewalld
+    # is not active. Open port 80/443 in your EC2 Security Group instead.
+    - name: "Gather service facts (to detect if firewalld is active)"
+      ansible.builtin.service_facts:
+      tags: [apps, firewall]
+
+    - name: "Firewalld — allow HTTP traffic for nginx (only if firewalld is running)"
       ansible.builtin.command:
         cmd: firewall-cmd --permanent --add-service=http
       register: fw_http
@@ -71,11 +86,15 @@
       failed_when:
         - fw_http.rc != 0
         - "'already enabled' not in fw_http.stderr | default('')"
+      when:
+        - ansible_facts.services is defined
+        - "'firewalld.service' in ansible_facts.services"
+        - ansible_facts.services['firewalld.service'].state == 'running'
       tags: [apps, firewall]
 
     - name: "Firewalld — reload to apply new rules"
       ansible.builtin.command:
         cmd: firewall-cmd --reload
       changed_when: true
-      when: fw_http is changed
+      when: fw_http is defined and fw_http is changed
       tags: [apps, firewall]

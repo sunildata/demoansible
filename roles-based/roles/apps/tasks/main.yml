@@ -1,10 +1,14 @@
 ---
 # =============================================================================
-# Role: apps (RedHat Family)
-# Purpose: Install 5 applications and manage service + firewall state.
+# Role: apps
+# Purpose : Install 5 applications, manage service state, and optionally
+#           configure firewalld (skipped automatically on EC2).
+# Target  : Amazon Linux 2023 (also works on RHEL / CentOS / Rocky / Fedora)
 #
-# Applications: nginx (service + firewall), git, curl, htop, vim-enhanced
-# Target OS:    RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
+# EC2 Note: AWS Security Groups control inbound traffic on EC2 — firewalld
+#           is typically not running. Open port 80/443 in your Security Group.
+#           The firewalld tasks below are skipped automatically when firewalld
+#           is not active.
 #
 # Variables consumed (from group_vars/all.yml):
 #   - applications : list of app definitions
@@ -31,7 +35,13 @@
   when: item.service is not none
   tags: [apps, services]
 
-- name: "Firewalld — allow HTTP traffic for nginx"
+# Detect whether firewalld is running before attempting to configure it.
+# On EC2, firewalld is typically inactive — tasks below will be skipped.
+- name: "Gather service facts (to detect if firewalld is active)"
+  ansible.builtin.service_facts:
+  tags: [apps, firewall]
+
+- name: "Firewalld — allow HTTP traffic for nginx (only if firewalld is running)"
   ansible.builtin.command:
     cmd: firewall-cmd --permanent --add-service=http
   register: fw_http
@@ -40,9 +50,13 @@
     - fw_http.rc != 0
     - "'already enabled' not in fw_http.stderr | default('')"
   notify: "Reload firewalld"
+  when:
+    - ansible_facts.services is defined
+    - "'firewalld.service' in ansible_facts.services"
+    - ansible_facts.services['firewalld.service'].state == 'running'
   tags: [apps, firewall]
 
-- name: "Firewalld — allow HTTPS traffic for nginx"
+- name: "Firewalld — allow HTTPS traffic for nginx (only if firewalld is running)"
   ansible.builtin.command:
     cmd: firewall-cmd --permanent --add-service=https
   register: fw_https
@@ -51,4 +65,8 @@
     - fw_https.rc != 0
     - "'already enabled' not in fw_https.stderr | default('')"
   notify: "Reload firewalld"
+  when:
+    - ansible_facts.services is defined
+    - "'firewalld.service' in ansible_facts.services"
+    - ansible_facts.services['firewalld.service'].state == 'running'
   tags: [apps, firewall]

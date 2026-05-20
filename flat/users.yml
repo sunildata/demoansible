@@ -1,12 +1,18 @@
 ---
 # =============================================================================
-# FLAT APPROACH — File 1: User Management (RedHat Family)
+# FLAT APPROACH — File 1: User Management
 # =============================================================================
-# Target OS: RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
-# Creates 20 Linux users across 5 groups.
+# Target OS : Amazon Linux 2023 (also works on RHEL / CentOS / Rocky / Fedora)
+# Creates   : 20 Linux users across 5 groups
 #
-# Run:     ansible-playbook flat/users.yml -i flat/inventory/hosts
-# Dry run: ansible-playbook flat/users.yml -i flat/inventory/hosts --check
+# Run against managed nodes only:
+#   ansible-playbook flat/users.yml -i flat/inventory/hosts -l managed
+#
+# Run against all servers (master + host1 + host2):
+#   ansible-playbook flat/users.yml -i flat/inventory/hosts -l all_servers
+#
+# Dry run:
+#   ansible-playbook flat/users.yml -i flat/inventory/hosts -l managed --check
 # =============================================================================
 
 - name: "User Management — Create users, set passwords and groups"
@@ -16,14 +22,14 @@
     - group_vars/all.yml
 
   pre_tasks:
-    - name: "Pre-flight — Verify OS is RedHat family"
+    - name: "Pre-flight — Verify OS is RedHat family (includes Amazon Linux)"
       ansible.builtin.assert:
         that:
           - ansible_os_family == 'RedHat'
         fail_msg: >
           Unsupported OS: {{ ansible_os_family }}.
-          This playbook targets RedHat family (RHEL, CentOS, Rocky, AlmaLinux, Fedora).
-        success_msg: "OS '{{ ansible_distribution }} {{ ansible_distribution_version }}' is supported"
+          Supported: Amazon Linux 2023, RHEL, CentOS, Rocky, AlmaLinux, Fedora.
+        success_msg: "OS '{{ ansible_distribution }} {{ ansible_distribution_version }}' — OK"
       tags: [always, preflight]
 
   tasks:

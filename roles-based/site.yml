@@ -1,21 +1,32 @@
 ---
 # =============================================================================
-# ROLES-BASED APPROACH — Orchestration Playbook (RedHat Family)
+# ROLES-BASED APPROACH — Orchestration Playbook
 # =============================================================================
-# Target OS: RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
-# This file is intentionally thin. All logic lives in roles/.
-# Compare with flat/users.yml + flat/apps.yml to see the difference.
+# Target OS  : Amazon Linux 2023 on AWS EC2
+# Servers    : master (172.31.42.76) | host1 (172.31.38.10) | host2 (172.31.32.228)
+# SSH User   : ec2-user
 #
-# Prerequisites: pip install passlib  (for password_hash filter)
-# Run:  ansible-playbook roles-based/site.yml -i roles-based/inventory/hosts
-# Dry:  ansible-playbook roles-based/site.yml -i roles-based/inventory/hosts --check
+# Prerequisites on master:
+#   pip3 install passlib          (for password_hash filter)
+#   chmod 400 ~/.ssh/your-key.pem (replace with your actual key filename)
+#
+# Run against managed nodes (host1 + host2) only:
+#   ansible-playbook roles-based/site.yml -i roles-based/inventory/hosts -l managed
+#
+# Run against all 3 servers (master + host1 + host2):
+#   ansible-playbook roles-based/site.yml -i roles-based/inventory/hosts -l all_servers
+#
+# Dry run (no changes applied):
+#   ansible-playbook roles-based/site.yml -i roles-based/inventory/hosts -l managed --check
+#
+# Compare this 8-line play body with flat/users.yml + flat/apps.yml to see the difference.
 # =============================================================================
 
-- name: "Provision demo servers — users, groups, and applications"
+- name: "Provision EC2 servers — users, groups, and applications"
   hosts: all
   become: true
 
   roles:
-    - role: common      # Step 1: OS groups (must run before users role)
-    - role: users       # Step 2: 20 Linux users with passwords + group memberships
-    - role: apps        # Step 3: Install 5 applications, start nginx service
+    - role: common      # Step 1: Pre-flight + EPEL (RHEL only) + dnf cache + OS groups
+    - role: users       # Step 2: 20 Linux users with hashed passwords + group memberships
+    - role: apps        # Step 3: Install 5 packages + start nginx + firewalld (if active)
