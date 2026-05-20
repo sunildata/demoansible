@@ -1,0 +1,119 @@
+---
+# =============================================================================
+# FLAT APPROACH — Cleanup / Teardown Playbook
+# =============================================================================
+# Reverses EVERYTHING created by flat/users.yml and flat/apps.yml:
+#   ✗ Removes firewalld HTTP/HTTPS rules (if firewalld is active)
+#   ✗ Stops and disables nginx service
+#   ✗ Uninstalls all 5 packages  (nginx, git, curl, htop, vim-enhanced)
+#   ✗ Deletes all 20 user accounts and their home directories
+#   ✗ Deletes all 5 groups       (developers, devops, qa, managers, readonly)
+#
+# Target OS : Amazon Linux 2023 (also works on RHEL / CentOS / Rocky / Fedora)
+#
+# Run against managed nodes (host1 + host2):
+#   ansible-playbook flat/cleanup.yml -i flat/inventory/hosts -l managed
+#
+# Run against all 3 servers:
+#   ansible-playbook flat/cleanup.yml -i flat/inventory/hosts -l all_servers
+#
+# Dry run (preview, no changes applied):
+#   ansible-playbook flat/cleanup.yml -i flat/inventory/hosts -l managed --check
+#
+# WARNING: This permanently deletes users, home directories, and packages.
+#          There is NO undo. Run --check first.
+# =============================================================================
+
+- name: "Cleanup — Reverse all changes made by flat/users.yml and flat/apps.yml"
+  hosts: all
+  become: true
+  vars_files:
+    - group_vars/all.yml
+
+  tasks:
+
+    # ── STEP 1: Firewalld rules ──────────────────────────────────────────────
+    - name: "Gather service facts (check if firewalld is active)"
+      ansible.builtin.service_facts:
+      tags: [cleanup, firewall]
+
+    - name: "Firewalld — remove HTTP rule"
+      ansible.builtin.command:
+        cmd: firewall-cmd --permanent --remove-service=http
+      register: fw_rm_http
+      changed_when: "'not enabled' not in fw_rm_http.stderr | default('')"
+      failed_when:
+        - fw_rm_http.rc != 0
+        - "'not enabled' not in fw_rm_http.stderr | default('')"
+      when:
+        - ansible_facts.services is defined
+        - "'firewalld.service' in ansible_facts.services"
+        - ansible_facts.services['firewalld.service'].state == 'running'
+      tags: [cleanup, firewall]
+
+    - name: "Firewalld — remove HTTPS rule"
+      ansible.builtin.command:
+        cmd: firewall-cmd --permanent --remove-service=https
+      register: fw_rm_https
+      changed_when: "'not enabled' not in fw_rm_https.stderr | default('')"
+      failed_when:
+        - fw_rm_https.rc != 0
+        - "'not enabled' not in fw_rm_https.stderr | default('')"
+      when:
+        - ansible_facts.services is defined
+        - "'firewalld.service' in ansible_facts.services"
+        - ansible_facts.services['firewalld.service'].state == 'running'
+      tags: [cleanup, firewall]
+
+    - name: "Firewalld — reload to apply rule removal"
+      ansible.builtin.command:
+        cmd: firewall-cmd --reload
+      changed_when: true
+      when:
+        - fw_rm_http is defined and fw_rm_http is changed
+      tags: [cleanup, firewall]
+
+    # ── STEP 2: Stop and disable nginx service ───────────────────────────────
+    - name: "Stop and disable service — {{ item.name }}"
+      ansible.builtin.service:
+        name: "{{ item.service }}"
+        state: stopped
+        enabled: false
+      loop: "{{ applications }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.service is not none
+      ignore_errors: true
+      tags: [cleanup, services]
+
+    # ── STEP 3: Remove packages ──────────────────────────────────────────────
+    - name: "Remove application packages"
+      ansible.builtin.package:
+        name: "{{ item.package }}"
+        state: absent
+      loop: "{{ applications }}"
+      loop_control:
+        label: "{{ item.name }}"
+      tags: [cleanup, packages]
+
+    # ── STEP 4: Delete user accounts (and home directories) ─────────────────
+    - name: "Delete user account — {{ item.name }}"
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        state: absent
+        remove: true        # removes home directory and mail spool
+        force: true         # removes user even if they are logged in
+      loop: "{{ users }}"
+      loop_control:
+        label: "{{ item.name }}"
+      tags: [cleanup, users]
+
+    # ── STEP 5: Delete groups ────────────────────────────────────────────────
+    # Groups are removed AFTER users — a group cannot be removed if it is
+    # still the primary group of an existing user.
+    - name: "Delete group — {{ item }}"
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ user_groups }}"
+      tags: [cleanup, groups]
