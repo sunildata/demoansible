@@ -1,0 +1,26 @@
+---
+# =============================================================================
+# Role: users
+# Purpose: Create 20 Linux users with hashed passwords and group memberships.
+#
+# Dependencies:
+#   - 'common' role MUST run first (creates the OS groups this role assigns users to)
+#
+# Variables consumed (from group_vars/all.yml):
+#   - users         : list of user definitions (name, password, primary_group, groups, shell, state)
+#   - user_groups   : list of group names (created by common role, referenced here for validation)
+# =============================================================================
+
+- name: "Create user account — {{ item.name }}"
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    group: "{{ item.primary_group }}"
+    groups: "{{ item.groups }}"
+    shell: "{{ item.shell | default(users_default_shell) }}"
+    state: "{{ item.state | default('present') }}"
+    create_home: "{{ users_create_home }}"
+  loop: "{{ users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [users, user_create]

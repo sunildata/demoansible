@@ -1,0 +1,9 @@
+---
+# =============================================================================
+# Role: common — Default Variables (RedHat Family)
+# These are the lowest-precedence values. Override in group_vars or host_vars.
+# =============================================================================
+
+# Package manager to use for cache refresh ('dnf' for RHEL 8+, 'yum' for RHEL 7)
+# This is auto-detected via ansible_pkg_mgr — no manual override needed in most cases.
+common_pkg_mgr: "{{ ansible_pkg_mgr | default('dnf') }}"

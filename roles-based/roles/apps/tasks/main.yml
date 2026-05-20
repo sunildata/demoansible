@@ -1,0 +1,54 @@
+---
+# =============================================================================
+# Role: apps (RedHat Family)
+# Purpose: Install 5 applications and manage service + firewall state.
+#
+# Applications: nginx (service + firewall), git, curl, htop, vim-enhanced
+# Target OS:    RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
+#
+# Variables consumed (from group_vars/all.yml):
+#   - applications : list of app definitions
+# =============================================================================
+
+- name: "Install application packages"
+  ansible.builtin.package:
+    name: "{{ item.package }}"
+    state: "{{ apps_package_state }}"
+  loop: "{{ applications }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: "Verify installed packages"
+  tags: [apps, packages]
+
+- name: "Start and enable service — {{ item.name }}"
+  ansible.builtin.service:
+    name: "{{ item.service }}"
+    state: "{{ item.service_state }}"
+    enabled: "{{ item.service_enabled }}"
+  loop: "{{ applications }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.service is not none
+  tags: [apps, services]
+
+- name: "Firewalld — allow HTTP traffic for nginx"
+  ansible.builtin.command:
+    cmd: firewall-cmd --permanent --add-service=http
+  register: fw_http
+  changed_when: "'already enabled' not in fw_http.stderr | default('')"
+  failed_when:
+    - fw_http.rc != 0
+    - "'already enabled' not in fw_http.stderr | default('')"
+  notify: "Reload firewalld"
+  tags: [apps, firewall]
+
+- name: "Firewalld — allow HTTPS traffic for nginx"
+  ansible.builtin.command:
+    cmd: firewall-cmd --permanent --add-service=https
+  register: fw_https
+  changed_when: "'already enabled' not in fw_https.stderr | default('')"
+  failed_when:
+    - fw_https.rc != 0
+    - "'already enabled' not in fw_https.stderr | default('')"
+  notify: "Reload firewalld"
+  tags: [apps, firewall]

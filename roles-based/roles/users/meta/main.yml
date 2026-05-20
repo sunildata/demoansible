@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: users
+  author: devops-team
+  description: >
+    Creates Linux user accounts with hashed passwords and group memberships.
+    Requires the 'common' role to run first (EPEL + groups).
+    Targets RedHat family OS.
+  license: MIT
+  min_ansible_version: "2.12"
+  platforms:
+    - name: EL
+      versions: ["7", "8", "9"]
+    - name: Fedora
+      versions: ["37", "38", "39", "40"]
+
+dependencies:
+  - role: common

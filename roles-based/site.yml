@@ -1,0 +1,21 @@
+---
+# =============================================================================
+# ROLES-BASED APPROACH — Orchestration Playbook (RedHat Family)
+# =============================================================================
+# Target OS: RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
+# This file is intentionally thin. All logic lives in roles/.
+# Compare with flat/users.yml + flat/apps.yml to see the difference.
+#
+# Prerequisites: pip install passlib  (for password_hash filter)
+# Run:  ansible-playbook roles-based/site.yml -i roles-based/inventory/hosts
+# Dry:  ansible-playbook roles-based/site.yml -i roles-based/inventory/hosts --check
+# =============================================================================
+
+- name: "Provision demo servers — users, groups, and applications"
+  hosts: all
+  become: true
+
+  roles:
+    - role: common      # Step 1: OS groups (must run before users role)
+    - role: users       # Step 2: 20 Linux users with passwords + group memberships
+    - role: apps        # Step 3: Install 5 applications, start nginx service

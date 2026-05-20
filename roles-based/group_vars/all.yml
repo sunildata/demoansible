@@ -1,0 +1,201 @@
+---
+# =============================================================================
+# ROLES-BASED APPROACH — Shared Variables
+# =============================================================================
+# NOTE: In a roles-based project, role-specific defaults live in:
+#   roles/{role}/defaults/main.yml   ← low-precedence defaults (overridable)
+#   roles/{role}/vars/main.yml       ← high-precedence internal vars
+#
+# This group_vars/all.yml only holds data that is shared across multiple roles
+# or that operators are expected to customise per environment.
+# =============================================================================
+
+# --- Shared: passed into the 'users' role ---
+user_groups:
+  - developers
+  - devops
+  - qa
+  - managers
+  - readonly
+
+users:
+  # --- Developers ---
+  - name: alice_smith
+    password: "{{ 'Alice@001' | password_hash('sha512') }}"
+    primary_group: developers
+    groups: [developers]
+    shell: /bin/bash
+    state: present
+
+  - name: bob_jones
+    password: "{{ 'Bob@002' | password_hash('sha512') }}"
+    primary_group: developers
+    groups: [developers, devops]
+    shell: /bin/bash
+    state: present
+
+  - name: carol_white
+    password: "{{ 'Carol@003' | password_hash('sha512') }}"
+    primary_group: developers
+    groups: [developers]
+    shell: /bin/bash
+    state: present
+
+  - name: dave_brown
+    password: "{{ 'Dave@004' | password_hash('sha512') }}"
+    primary_group: developers
+    groups: [developers, qa]
+    shell: /bin/bash
+    state: present
+
+  # --- DevOps ---
+  - name: eve_davis
+    password: "{{ 'Eve@005' | password_hash('sha512') }}"
+    primary_group: devops
+    groups: [devops]
+    shell: /bin/bash
+    state: present
+
+  - name: frank_miller
+    password: "{{ 'Frank@006' | password_hash('sha512') }}"
+    primary_group: devops
+    groups: [devops, developers]
+    shell: /bin/bash
+    state: present
+
+  - name: grace_wilson
+    password: "{{ 'Grace@007' | password_hash('sha512') }}"
+    primary_group: devops
+    groups: [devops]
+    shell: /bin/bash
+    state: present
+
+  - name: henry_moore
+    password: "{{ 'Henry@008' | password_hash('sha512') }}"
+    primary_group: devops
+    groups: [devops, managers]
+    shell: /bin/bash
+    state: present
+
+  # --- QA ---
+  - name: iris_taylor
+    password: "{{ 'Iris@009' | password_hash('sha512') }}"
+    primary_group: qa
+    groups: [qa]
+    shell: /bin/bash
+    state: present
+
+  - name: jack_anderson
+    password: "{{ 'Jack@010' | password_hash('sha512') }}"
+    primary_group: qa
+    groups: [qa, developers]
+    shell: /bin/bash
+    state: present
+
+  - name: karen_thomas
+    password: "{{ 'Karen@011' | password_hash('sha512') }}"
+    primary_group: qa
+    groups: [qa]
+    shell: /bin/bash
+    state: present
+
+  - name: liam_jackson
+    password: "{{ 'Liam@012' | password_hash('sha512') }}"
+    primary_group: qa
+    groups: [qa, devops]
+    shell: /bin/bash
+    state: present
+
+  # --- Managers ---
+  - name: mia_harris
+    password: "{{ 'Mia@013' | password_hash('sha512') }}"
+    primary_group: managers
+    groups: [managers]
+    shell: /bin/bash
+    state: present
+
+  - name: noah_martin
+    password: "{{ 'Noah@014' | password_hash('sha512') }}"
+    primary_group: managers
+    groups: [managers, developers]
+    shell: /bin/bash
+    state: present
+
+  - name: olivia_garcia
+    password: "{{ 'Olivia@015' | password_hash('sha512') }}"
+    primary_group: managers
+    groups: [managers]
+    shell: /bin/bash
+    state: present
+
+  - name: peter_martinez
+    password: "{{ 'Peter@016' | password_hash('sha512') }}"
+    primary_group: managers
+    groups: [managers, devops]
+    shell: /bin/bash
+    state: present
+
+  # --- Readonly ---
+  - name: quinn_robinson
+    password: "{{ 'Quinn@017' | password_hash('sha512') }}"
+    primary_group: readonly
+    groups: [readonly]
+    shell: /bin/bash
+    state: present
+
+  - name: rachel_clark
+    password: "{{ 'Rachel@018' | password_hash('sha512') }}"
+    primary_group: readonly
+    groups: [readonly]
+    shell: /bin/bash
+    state: present
+
+  - name: sam_rodriguez
+    password: "{{ 'Sam@019' | password_hash('sha512') }}"
+    primary_group: readonly
+    groups: [readonly]
+    shell: /bin/bash
+    state: present
+
+  - name: tara_lewis
+    password: "{{ 'Tara@020' | password_hash('sha512') }}"
+    primary_group: readonly
+    groups: [readonly]
+    shell: /bin/bash
+    state: present
+
+# --- Shared: passed into the 'apps' role (RedHat Family) ---
+# Notes:
+#   - htop       : requires EPEL repository (installed by common role)
+#   - vim-enhanced: full Vim on RedHat; 'vim' alone installs only vim-minimal
+#   - nginx      : available in AppStream (RHEL 8+) or EPEL (RHEL 7)
+applications:
+  - name: nginx
+    package: nginx
+    service: nginx
+    service_state: started
+    service_enabled: true
+
+  - name: git
+    package: git
+    service: ~
+    service_state: ~
+    service_enabled: ~
+
+  - name: curl
+    package: curl
+    service: ~
+    service_state: ~
+    service_enabled: ~
+
+  - name: htop
+    package: htop
+    service: ~
+    service_state: ~
+    service_enabled: ~
+
+  - name: vim-enhanced
+    package: vim-enhanced
+    service: ~
+    service_state: ~
+    service_enabled: ~

@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: apps
+  author: devops-team
+  description: >
+    Installs OS packages (nginx, git, curl, htop, vim-enhanced) and manages
+    nginx service state and firewalld HTTP/HTTPS rules.
+    Targets RedHat family OS. Requires EPEL (installed by common role).
+  license: MIT
+  min_ansible_version: "2.12"
+  platforms:
+    - name: EL
+      versions: ["7", "8", "9"]
+    - name: Fedora
+      versions: ["37", "38", "39", "40"]
+
+dependencies:
+  - role: common

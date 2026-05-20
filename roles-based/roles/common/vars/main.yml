@@ -1,0 +1,3 @@
+---
+# Role: common — Internal Variables (high precedence, not overridden by operators)
+# Add any role-internal constants here. Currently empty — all config is in defaults.

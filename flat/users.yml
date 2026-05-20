@@ -1,0 +1,49 @@
+---
+# =============================================================================
+# FLAT APPROACH — File 1: User Management (RedHat Family)
+# =============================================================================
+# Target OS: RHEL / CentOS / Rocky Linux / AlmaLinux / Fedora
+# Creates 20 Linux users across 5 groups.
+#
+# Run:     ansible-playbook flat/users.yml -i flat/inventory/hosts
+# Dry run: ansible-playbook flat/users.yml -i flat/inventory/hosts --check
+# =============================================================================
+
+- name: "User Management — Create users, set passwords and groups"
+  hosts: all
+  become: true
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: "Pre-flight — Verify OS is RedHat family"
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == 'RedHat'
+        fail_msg: >
+          Unsupported OS: {{ ansible_os_family }}.
+          This playbook targets RedHat family (RHEL, CentOS, Rocky, AlmaLinux, Fedora).
+        success_msg: "OS '{{ ansible_distribution }} {{ ansible_distribution_version }}' is supported"
+      tags: [always, preflight]
+
+  tasks:
+    - name: "Ensure groups exist before users are created"
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ user_groups }}"
+      tags: [users, groups]
+
+    - name: "Create user account — {{ item.name }}"
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        password: "{{ item.password }}"
+        group: "{{ item.primary_group }}"
+        groups: "{{ item.groups }}"
+        shell: "{{ item.shell | default('/bin/bash') }}"
+        state: "{{ item.state | default('present') }}"
+        create_home: true
+      loop: "{{ users }}"
+      loop_control:
+        label: "{{ item.name }}"
+      tags: [users, user_create]

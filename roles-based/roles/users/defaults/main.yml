@@ -1,0 +1,11 @@
+---
+# =============================================================================
+# Role: users — Default Variables
+# Override these in group_vars/all.yml or host_vars/ for environment-specific config.
+# =============================================================================
+
+# Default login shell for all users (can be overridden per-user with item.shell)
+users_default_shell: /bin/bash
+
+# Whether to create a home directory for each user
+users_create_home: true

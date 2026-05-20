@@ -1,0 +1,8 @@
+---
+# =============================================================================
+# Role: apps — Default Variables
+# Override in group_vars/all.yml or host_vars/ as needed.
+# =============================================================================
+
+# Package install state — 'present' keeps current version, 'latest' upgrades
+apps_package_state: present
